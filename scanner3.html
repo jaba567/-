@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Looksmaxxing AI Scanner v2.0</title>
+    <!-- Подключаем официальные AI-библиотеки от Google для распознавания лиц -->
+    <script src="https://jsdelivr.net"></script>
+    <script src="https://jsdelivr.net"></script>
+    <script src="https://jsdelivr.net"></script>
+    <script src="https://jsdelivr.net"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #0a0a0c; color: #e2e8f0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; }
+        .container { max-width: 450px; width: 100%; background: #13131a; border: 1px solid #22222f; border-radius: 16px; padding: 24px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-top: 20px; }
+        h1 { font-size: 24px; color: #a855f7; margin-bottom: 10px; text-shadow: 0 0 10px rgba(168,85,247,0.4); }
+        .subtitle { font-size: 14px; color: #94a3b8; margin-bottom: 25px; line-height: 1.4; }
+        .btn { background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%); color: white; border: none; padding: 14px 28px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; transition: 0.3s; margin-top: 15px; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 0 15px rgba(168,85,247,0.4); }
+        .btn:disabled { background: #1e1e24; color: #475569; cursor: not-allowed; box-shadow: none; }
+        .upload-zone { border: 2px dashed #3b82f6; border-radius: 12px; padding: 40px 20px; background: #181825; cursor: pointer; transition: 0.3s; margin-bottom: 20px; position: relative; }
+        .upload-zone:hover { border-color: #a855f7; background: #1e1e30; }
+        .progress-bar { width: 100%; background: #22222f; height: 10px; border-radius: 5px; overflow: hidden; margin: 20px 0; display: none; }
+        .progress-fill { width: 0%; height: 100%; background: #a855f7; transition: width 0.4s ease; box-shadow: 0 0 10px #a855f7; }
+        .status-text { color: #3b82f6; font-size: 14px; font-weight: 500; height: 20px; margin-bottom: 10px; display: none; }
+        .error-text { color: #ef4444; font-size: 14px; font-weight: bold; margin-top: 10px; display: none; background: #2d1a1a; padding: 10px; border-radius: 6px; border: 1px solid #ef4444; line-height: 1.4; }
+        .result-card { display: none; background: #1e1e2f; border: 1px solid #33334d; border-radius: 12px; padding: 20px; margin-top: 15px; text-align: left; }
+        .score { font-size: 48px; font-weight: 800; color: #22c55e; text-align: center; margin-bottom: 15px; text-shadow: 0 0 15px rgba(34,197,94,0.3); }
+        .stat-line { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #2d2d3f; font-size: 14px; }
+        .stat-line span:last-child { font-weight: bold; color: #a855f7; }
+        .advice { background: #251b35; border-left: 4px solid #a855f7; padding: 12px; border-radius: 4px; margin-top: 15px; font-size: 13px; line-height: 1.4; color: #ddd; }
+        .ads-block { border: 1px dashed #475569; background: #1e293b; color: #94a3b8; padding: 15px; font-size: 12px; border-radius: 8px; margin: 20px 0; text-transform: uppercase; letter-spacing: 1px; text-align: center; }
+        .hidden { display: none !important; }
+        #preview-img { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 10px; display: none; margin-left: auto; margin-right: auto; }
+        .loading-model { font-size: 13px; color: #eab308; margin-bottom: 10px; font-weight: 500; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Looksmaxxing AI Scanner v2.0</h1>
+        <p class="subtitle">Узнай свой реальный балл привлекательности, уровень челюсти и получи советы по мьюингу за 10 секунд.</p>
+        
+        <div id="model-status" class="loading-model">Загрузка ИИ-модулей распознавания лиц... Подождите</div>
+        <div class="ads-block">Здесь будет верхний баннер РСЯ</div>
+
+        <div class="upload-zone" onclick="document.getElementById('file-input').click()">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" style="margin-bottom:10px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            <p id="upload-instruction" style="font-size:14px; color:#94a3b8;">Нажми, чтобы загрузить селфи или фото профиля</p>
+            <input type="file" id="file-input" class="hidden" accept="image/*" onchange="handleFile(this)">
+            <img id="preview-img" src="#" alt="Превью">
+        </div>
+
+        <div class="error-text" id="error-text">❌ Лицо на фото не обнаружено!<br>Пожалуйста, загрузите четкую фотографию человека крупным планом.</div>
+
+        <button class="btn" id="start-btn" onclick="startScanning()" disabled>Запуск AI нейро-сканера</button>
+        
+        <div class="status-text" id="status-text"></div>
+        <div class="progress-bar" id="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+
+        <div class="result-card" id="result-card">
+            <div class="score" id="res-score">8.2/10</div>
+            <div class="stat-line"><span>Линия челюсти (Jawline):</span><span id="res-jaw">9.1/10</span></div>
+            <div class="stat-line"><span>Форма глаз (Hunter Eyes):</span><span id="res-eyes">Положительный Canthal Tilt</span></div>
+            <div class="stat-line"><span>Симметрия лица:</span><span id="res-sym">94%</span></div>
+            <div class="stat-line"><span>Уровень тир-листа:</span><span id="res-tier">Chad / Модель</span></div>
+            <div class="advice" id="res-advice">Загрузка советов...</div>
+            
+            <div class="ads-block">Здесь будет нижний баннер РСЯ</div>
+            
+            <button class="btn" onclick="location.reload()">Пройти заново</button>
+        </div>
+    </div>
+
+    <script>
+        let model = null;
+
+        // Автоматическая подгрузка нейросети Google при открытии страницы
+        async function initAI() {
+            try {
+                model = await blazeface.load();
+                document.getElementById('model-status').style.display = 'none';
+                document.getElementById('start-btn').disabled = false;
+            } catch (e) {
+                document.getElementById('model-status').innerText = "Ошибка сети при загрузке нейросети. Проверьте интернет.";
+                document.getElementById('model-status').style.color = "#ef4444";
+            }
+        }
+        initAI();
+
+        function handleFile(input) {
+            const file = input.files[0];
+            if (file) {
+                document.getElementById('error-text').style.display = 'none';
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById('preview-img');
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                    document.getElementById('upload-instruction').style.display = 'none';
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function startScanning() {
+            const imgElement = document.getElementById('preview-img');
+            const errorText = document.getElementById('error-text');
+            
+            if (!imgElement.src || imgElement.style.display === 'none') {
+                alert('Пожалуйста, сначала загрузи фотографию для анализа!');
+                return;
+            }
+
+            errorText.style.display = 'none';
+            document.getElementById('start-btn').style.display = 'none';
+            
+            const status = document.getElementById('status-text');
+            const bar = document.getElementById('progress-bar');
+            const fill = document.getElementById('progress-fill');
+            
+            status.style.display = 'block';
+            bar.style.display = 'block';
+            status.innerText = "Нейросеть проверяет наличие лица...";
+            fill.style.width = '15%';
+
+            // Запускаем реальный детектор лиц
+            setTimeout(async () => {
+                try {
+                    const predictions = await model.estimateFaces(imgElement, false);
+                    
+                    // Если массив лиц пустой (length === 0) - лица на фото нет!
+                    if (predictions.length === 0) {
+                        status.style.display = 'none';
+                        bar.style.display = 'none';
+                        fill.style.width = '0%';
+                        errorText.style.display = 'block';
+                        document.getElementById('start-btn').style.display = 'block';
+                        return;
+                    }
+
+                    // Если лицо успешно найдено - запускаем симуляцию глубокого анализа
+                    runAnalyse(status, fill);
+                } catch(err) {
+                    alert("Произошла ошибка при анализе изображения.");
+                    document.getElementById('start-btn').style.display = 'block';
+                }
+            }, 600);
+        }
+
+        function runAnalyse(status, fill) {
+            const phases = [
+                { t: "Сканирование геометрии черепа и пропорций...", p: 40 },
+                { t: "Анализ угла нижней челюсти (Jawline)...", p: 65 },
+                { t: "Определение наклона глаз (Canthal Tilt)...", p: 85 },
+                { t: "Синхронизация с базой Looksmaxxing моделей...", p: 100 }
+            ];
+
+            let currentPhase = 0;
+            const interval = setInterval(() => {
